@@ -1,31 +1,4 @@
-local M = {}
-M.temp_file = vim.fn.tempname()
-M.temp_path = M.temp_file .. ".tmp"
-
-
-function read_project()
-  local cwd = vim.fn.getcwd()
-  local content = {}
-
-  local files = vim.fn.globpath(cwd, "**/*", false, true)
-
-  for _, file in ipairs(files) do
-    local f = io.open(file, "r")
-
-    if f then
-      local text = f:read("*a")
-      f:close()
-
-      -- evita binários gigantes
-      if text and #text < 20000 then
-        table.insert(content, "FILE: " .. file .. "\n" .. text)
-      end
-    end
-  end
-
-  return table.concat(content, "\n\n")
-end
-
+M.temp_path = M.temp_file .. ".tmp.md"
 
 
 
@@ -55,21 +28,18 @@ function M.chat()
 end
 
 function M.curl_lms()
-
-
     local prompt = vim.fn.input("Chat > ")
-    local project = read_project()
-
     local json = vim.fn.json_encode({
         model = "qwen/qwen3-vl-4b",
         messages = {
             {
                 role = "user",
-                content =  "PROJECT FILES:\n" .. project .. "\n\nUSER QUESTION:\n" .. prompt
+                content = prompt
             }
         }
     })
-    local result = vim.system({
+
+    vim.system({
         "curl",
         "-s",
         "http://localhost:1234/v1/chat/completions",
@@ -77,21 +47,26 @@ function M.curl_lms()
         "Content-Type: application/json",
         "-d",
         json
-    }, { text = true }):wait()
+    }, { text = true }, function(result)
+        -- Esse callback roda quando o curl terminar, sem bloquear
+        vim.schedule(function()
+            local ok, response = pcall(vim.json.decode, result.stdout)
+            if not ok then
+                vim.notify("Erro ao decodificar resposta", vim.log.levels.ERROR)
+                return
+            end
 
-    local files = io.open(M.temp_path , "w")
+            local files = io.open(M.temp_path, "w")
+            if not files then return end
+            files:write("new\n")
+            files:write(response.choices[1].message.content or "", "\n")
+            files:close()
 
-    local response = vim.json.decode(result.stdout)
-
-    files:write("new\n")
-    files:write(response.choices[1].message.content or "", "\n")
-    files:close()
-
-    vim.notify(M.temp_path, vim.log.levels.INFO)
-
-    vim.cmd("edit " .. M.temp_path)
+            vim.notify(M.temp_path, vim.log.levels.INFO)
+            vim.cmd("edit " .. M.temp_path)
+        end)
+    end)
 end
-
 function M.setup()
     vim.api.nvim_create_user_command("CreateTempFile", function()
         M.create_temp_file()
