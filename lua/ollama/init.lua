@@ -18,7 +18,7 @@ function M.create_temp_file()
     return temp_path
 end
 
-  vim.api.nvim_create_user_command("create_temp_file",function ()
+  vim.api.nvim_create_user_command("createtempfile",function ()
       require("ollama").create_temp_file();
 
   end,{}
