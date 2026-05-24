@@ -25,7 +25,7 @@ function M.create_temp_file()
     return temp_path
 end
 
-vim.api.nvim_create_user_command("GenUnloadModel", function()
+vim.api.nvim_create_user_command("create", function()
     create_temp_file();
 
 end, {})
