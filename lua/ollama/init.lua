@@ -1,6 +1,30 @@
 local M = {}
 M.temp_file = vim.fn.tempname()
-M.temp_path = M.temp_file .. ".tmp"
+M.temp_path = M.temp_file .. ".tmp.md"
+
+function list_files(path)
+    -- conta ficheiros
+    local count_result = vim.system({
+        "find", path, "-type", "f", "-not", "-path", "*/.git/*"
+    }, { text = true }):wait()
+
+    local files = vim.split(count_result.stdout or "", "\n", { trimempty = true })
+
+    -- se tiver muitos ficheiros, mostra só diretórios raiz
+    if #files > 50 then
+        local dirs_result = vim.system({
+            "find", path, "-maxdepth", "1", "-type", "d", "-not", "-path", "./.git"
+        }, { text = true }):wait()
+
+        return dirs_result.stdout or ""
+    end
+
+    -- caso contrário devolve todos os ficheiros
+    return count_result.stdout or ""
+end
+
+
+
 
 local function get_project_structure()
     -- conta ficheiros
@@ -23,6 +47,10 @@ local function get_project_structure()
     return count_result.stdout or ""
 end
 
+
+
+
+
 local function read_file(path)
     local f = io.open(path, "r")
     if not f then return nil end
@@ -30,6 +58,8 @@ local function read_file(path)
     f:close()
     return content
 end
+
+
 
 local tools = {
     {
@@ -48,6 +78,23 @@ local tools = {
                 required = { "path" }
             }
         }
+    },
+    {
+    type = "function",
+    ["function"] = {
+        name = "list_files",
+        description = "Lista os ficheiros dentro de uma pasta",
+        parameters = {
+            type = "object",
+            properties = {
+                path = {
+                    type = "string",
+                    description = "Pasta a listar"
+                }
+            },
+            required = { "path" }
+        }
+    }
     }
 }
 
@@ -89,19 +136,21 @@ local function run_agent(prompt, callback)
                     table.insert(messages, msg)
 
                     for _, tool_call in ipairs(msg.tool_calls) do
-                        if tool_call["function"].name == "read_file" then
-                            local args = vim.json.decode(tool_call["function"].arguments)
-                            local file_content = read_file(args.path)
-
-                            vim.notify("IA pediu ficheiro: " .. args.path, vim.log.levels.INFO)
-
-                            -- Adiciona o resultado da tool ao histórico
-                            table.insert(messages, {
-                                role = "tool",
-                                tool_call_id = tool_call.id,
-                                content = file_content or "Ficheiro não encontrado: " .. args.path
-                            })
+                         local name = tool_call["function"].name
+                         local args = vim.json.decode(tool_call["function"].arguments)
+                         local result = ""
+                         if name == "read_file" then
+                            result = read_file(args.path)
+                            or "Ficheiro não encontrado"
+                        elseif name == "list_files" then
+                            result = list_files(args.path)
+                            or "Pasta não encontrada"
                         end
+                        table.insert(messages, {
+                            role = "tool",
+                            tool_call_id = tool_call.id,
+                            content = result
+                        })
                     end
 
                     -- Chama a API novamente com o contexto atualizado
