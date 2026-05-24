@@ -23,6 +23,23 @@ function list_files(path)
     return count_result.stdout or ""
 end
 
+function write_file(path, content)
+    local dir = vim.fn.fnamemodify(path, ":h")
+
+    -- cria diretórios se não existirem
+    vim.fn.mkdir(dir, "p")
+
+    local f = io.open(path, "w")
+
+    if not f then
+        return "Erro ao escrever ficheiro: " .. path
+    end
+
+    f:write(content)
+    f:close()
+
+    return "Ficheiro escrito: " .. path
+end
 
 
 
@@ -95,7 +112,28 @@ local tools = {
             required = { "path" }
         }
     }
+    },
+    {
+    type = "function",
+    ["function"] = {
+        name = "write_file",
+        description = "Cria ou edita um ficheiro",
+        parameters = {
+            type = "object",
+            properties = {
+                path = {
+                    type = "string",
+                    description = "Caminho do ficheiro"
+                },
+                content = {
+                    type = "string",
+                    description = "Conteúdo completo do ficheiro"
+                }
+            },
+            required = { "path", "content" }
+        }
     }
+}
 }
 
 local function run_agent(prompt, callback)
@@ -145,6 +183,14 @@ local function run_agent(prompt, callback)
                         elseif name == "list_files" then
                             result = list_files(args.path)
                             or "Pasta não encontrada"
+                        elseif name=="write_file" then
+                            local chek = vim.fn.input( "save IA edit ? Y/N:")
+                            if chek == "y" then
+                                result = write_file(args.path, args.content)
+                            else
+                                result = "the file not change";
+                            end
+
                         end
                         table.insert(messages, {
                             role = "tool",
