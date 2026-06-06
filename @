@@ -9,28 +9,9 @@ M.temp_file = vim.fn.tempname()
 M.temp_path = M.temp_file .. ".tmp.md" -- os .. e concatenasao
 M.width = 40
 
-function M.append_message(lines)
-    local buf = M.state.buf
-
-    if not buf or not vim.api.nvim_buf_is_valid(buf) then
-        return
-    end
-
-    vim.bo.modifiable = true
-
-    vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
-
-    vim.bo.modifiable = false
-
-    local cursor = vim.api.nvim_buf_line_count(buf)
-    vim.api.nvim_win_set_cursor(M.state.win, { cursor, 0 })
-end
+M.append_message(lines)({})
 
 local function open_file()
-    if M.state.win then
-        return
-    end
-
     local buf = vim.api.nvim_create_buf(false, true)
 
     vim.cmd("vsplit")
