@@ -26,6 +26,28 @@ function M.append_message(lines)
     vim.api.nvim_win_set_cursor(M.state.win, { cursor, 0 })
 end
 
+local function open_chat_status()
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    vim.cmd("split")
+
+    local win = vim.api.nvim_get_current_win()
+
+    vim.api.nvim_win_set_width(win, M.width)
+    vim.api.nvim_win_set_height(win, 10)
+    vim.api.nvim_win_set_buf(win, buf)
+
+    vim.bo[buf].buftype = "nofile"
+    vim.bo[buf].bufhidden = "hide"
+    vim.bo[buf].swapfile = false
+    vim.bo[buf].buflisted = false
+    vim.bo[buf].filetype = "md"
+
+    -- read only
+    vim.bo[buf].modifiable = false
+    vim.bo[buf].readonly = true
+end
+
 local function open_file()
     if M.state.win then
         return
@@ -62,6 +84,7 @@ local function open_file()
         "#AI: Olá 👋",
         "",
     })
+    open_chat_status()
 end
 
 local function close_chat()
