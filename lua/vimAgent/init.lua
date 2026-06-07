@@ -1,7 +1,8 @@
 local M = {}
 
-M.url = "http://localhost:11434/api/generate"
+M.url = "http://localhost:11434/api/chat"
 local ui = require("vimAgent.ui")
+local tools = require("vimAgent.tools")
 
 function M.set_file()
     local buf = vim.api.nvim_get_current_buf()
@@ -10,10 +11,17 @@ function M.set_file()
 end
 
 function M.simple_curl_p(prompt)
+    local messages = {
+        {
+            role = "user",
+            content = prompt,
+        },
+    }
     local json = vim.fn.json_encode({
-        model = "codegemma:7b",
+        model = "qwen3:8b",
         think = false,
-        prompt = prompt,
+        messages = messages,
+        tools = tools.tools,
     })
 
     vim.system({ "curl", "-N", M.url, "-H", "Content-Type: application/json", "-d", json }, {
@@ -23,12 +31,16 @@ function M.simple_curl_p(prompt)
             end
 
             local ok, decode = pcall(vim.json.decode, data)
+
             if not ok then
+                print(data)
                 return
             end
 
-            if decode.response then
-                ui.append_message(decode.response)
+            print(data)
+
+            if decode.message and decode.message.content then
+                ui.append_message(decode.message.content)
             end
         end,
     })
