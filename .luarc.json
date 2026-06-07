@@ -1,4 +1,4 @@
 {
   "runtime.version": "LuaJIT",
-  "workspace.library": ["$VIMRUNTIME"]
+  "workspace.library": ["$VIMRUNTIME",".lua"]
 }
