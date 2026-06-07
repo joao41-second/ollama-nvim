@@ -1,154 +1,45 @@
 local M = {}
 
 M.url = "http://localhost:11434/api/generate"
-M.state = {
-    buf = nil,
-    win = nil,
-}
-
-M.temp_file = vim.fn.tempname()
-M.temp_path = M.temp_file .. ".tmp.md" -- os .. e concatenasao
-M.width = 40
-
-function M.append_message(lines)
-    vim.schedule(function()
-        local buf = M.state.buf
-
-        if not buf or not vim.api.nvim_buf_is_valid(buf) then
-            return
-        end
-
-        local cursor = vim.api.nvim_buf_line_count(buf)
-
-        local last_line = cursor - 1
-
-        local last_col = #vim.api.nvim_buf_get_lines(buf, last_line, last_line + 1, false)[1]
-
-        vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
-
-        vim.api.nvim_buf_set_text(buf, last_line, last_col, last_line, last_col, { lines })
-
-        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-
-        cursor = vim.api.nvim_buf_line_count(buf)
-
-        vim.api.nvim_win_set_cursor(M.state.win, { cursor, 0 })
-    end)
-end
-
-function M.append_message_line(lines)
-    vim.schedule(function()
-        local buf = M.state.buf
-
-        if not buf or not vim.api.nvim_buf_is_valid(buf) then
-            return
-        end
-
-        vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
-        local cleaned = lines:gsub("\n", " ")
-        vim.api.nvim_buf_set_lines(buf, -1, -1, false, { cleaned })
-
-        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
-
-        local cursor = vim.api.nvim_buf_line_count(buf)
-        vim.api.nvim_win_set_cursor(M.state.win, { cursor, 0 })
-    end)
-end
+local ui = require("vimAgent.ui")
 
 function M.simple_curl_p(prompt)
     local json = vim.fn.json_encode({
         model = "codegemma:7b",
+        think = false,
         prompt = prompt,
     })
+
     vim.system({ "curl", "-N", M.url, "-H", "Content-Type: application/json", "-d", json }, {
         stdout = function(_, data)
-            if data then
-                local chek, decode = pcall(vim.json.decode, data)
-                if not chek then
-                    return
-                end
-                if decode.response then
-                    M.append_message(decode.response)
-                end
+            if not data then
+                return
+            end
+
+            local ok, decode = pcall(vim.json.decode, data)
+            if not ok then
+                return
+            end
+
+            if decode.response then
+                ui.append_message(decode.response)
             end
         end,
     })
 end
 
-local function open_chat_status()
-    local buf = vim.api.nvim_create_buf(false, true)
-
-    vim.cmd("split")
-
-    local win = vim.api.nvim_get_current_win()
-
-    vim.api.nvim_win_set_width(win, M.width)
-    vim.api.nvim_win_set_height(win, 10)
-    vim.api.nvim_win_set_buf(win, buf)
-
-    vim.bo[buf].buftype = "nofile"
-    vim.bo[buf].bufhidden = "hide"
-    vim.bo[buf].swapfile = false
-    vim.bo[buf].buflisted = false
-    vim.bo[buf].filetype = "md"
-
-    -- read only
-    vim.bo[buf].modifiable = false
-    vim.bo[buf].readonly = true
-end
-
-local function open_file()
-    if M.state.win then
-        return
-    end
-
-    local buf = vim.api.nvim_create_buf(false, true)
-
-    vim.cmd("vsplit")
-    vim.cmd("wincmd L ")
-
-    local win = vim.api.nvim_get_current_win()
-
-    vim.api.nvim_win_set_width(win, M.width)
-    vim.api.nvim_win_set_buf(win, buf)
-
-    vim.bo[buf].buftype = "nofile"
-    vim.bo[buf].bufhidden = "hide"
-    vim.bo[buf].swapfile = false
-    vim.bo[buf].buflisted = false
-    vim.bo[buf].filetype = "md"
-
-    -- read only
-    vim.bo[buf].modifiable = false
-    vim.bo[buf].readonly = true
-
-    M.state.buf = buf
-    M.state.win = win
-
-    M.append_message_line("╭────────────────────────────╮")
-    M.append_message_line("│         My Chat            │")
-    M.append_message_line("╰────────────────────────────╯")
-    M.append_message_line("")
-    open_chat_status()
-end
-
-local function close_chat()
-    if M.state.win and vim.api.nvim_win_is_valid(M.state.win) then
-        vim.api.nvim_win_close(M.state.win, true)
-    end
-
-    M.state.win = nil
-end
-
 function M.setup()
     vim.api.nvim_create_user_command("OpenFile", function()
-        open_file()
+        ui.open_file()
     end, {})
+
     vim.api.nvim_create_user_command("CloseFile", function()
-        close_chat()
+        ui.close_chat()
     end, {})
+
     vim.api.nvim_create_user_command("Oi", function()
         M.simple_curl_p("oi")
     end, {})
 end
+
 return M
