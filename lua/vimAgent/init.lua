@@ -18,6 +18,32 @@ function M.append_message(lines)
             return
         end
 
+        local cursor = vim.api.nvim_buf_line_count(buf)
+
+        local last_line = cursor - 1
+
+        local last_col = #vim.api.nvim_buf_get_lines(buf, last_line, last_line + 1, false)[1]
+
+        vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+
+        vim.api.nvim_buf_set_text(buf, last_line, last_col, last_line, last_col, { lines })
+
+        vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+
+        cursor = vim.api.nvim_buf_line_count(buf)
+
+        vim.api.nvim_win_set_cursor(M.state.win, { cursor, 0 })
+    end)
+end
+
+function M.append_message_line(lines)
+    vim.schedule(function()
+        local buf = M.state.buf
+
+        if not buf or not vim.api.nvim_buf_is_valid(buf) then
+            return
+        end
+
         vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
         local cleaned = lines:gsub("\n", " ")
         vim.api.nvim_buf_set_lines(buf, -1, -1, false, { cleaned })
@@ -99,9 +125,10 @@ local function open_file()
     M.state.buf = buf
     M.state.win = win
 
-    M.append_message("╭────────────────────────────╮")
-    M.append_message("│         My Chat            │")
-    M.append_message("╰────────────────────────────╯")
+    M.append_message_line("╭────────────────────────────╮")
+    M.append_message_line("│         My Chat            │")
+    M.append_message_line("╰────────────────────────────╯")
+    M.append_message_line("")
     open_chat_status()
 end
 
