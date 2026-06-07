@@ -3,6 +3,12 @@ local M = {}
 M.url = "http://localhost:11434/api/generate"
 local ui = require("vimAgent.ui")
 
+function M.set_file()
+    local buf = vim.api.nvim_get_current_buf()
+    local name = vim.api.nvim_buf_get_name(buf)
+    ui.append_status(name)
+end
+
 function M.simple_curl_p(prompt)
     local json = vim.fn.json_encode({
         model = "codegemma:7b",
@@ -26,6 +32,14 @@ function M.simple_curl_p(prompt)
             end
         end,
     })
+
+    ui.append_message_line("")
+end
+
+function M.chat()
+    local prompt = vim.fn.input("chat:")
+    ui.open_file()
+    M.simple_curl_p(prompt)
 end
 
 function M.setup()
@@ -37,8 +51,11 @@ function M.setup()
         ui.close_chat()
     end, {})
 
-    vim.api.nvim_create_user_command("Oi", function()
-        M.simple_curl_p("oi")
+    vim.api.nvim_create_user_command("Chat", function()
+        M.chat()
+    end, {})
+    vim.api.nvim_create_user_command("SetFile", function()
+        M.set_file()
     end, {})
 end
 
