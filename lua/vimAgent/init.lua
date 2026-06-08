@@ -41,6 +41,13 @@ function M.simple_curl_p(prompt)
 
             if decode.message and decode.message.content then
                 ui.append_message(decode.message.content)
+
+                if decode.message.tool_calls then
+                    local tools = decode.message.tool_calls[1]
+                    print(tools["function"].name)
+                    if tools["function"].name == "readfile" then
+                    end
+                end
             end
         end,
     })
