@@ -23,11 +23,20 @@ M.tools = {
 function M.read_file(path)
     local f = io.open(path, "r")
     if not f then
-        return nil
+        return "error ao ler o ficheiro"
     end
     local content = f:read("*a")
     f:close()
     return content
+end
+
+function M.tools_use(tools, arguments)
+    local var = ""
+    if tools == "read_file" then
+        print("usar funsao", arguments.path)
+        var = M.read_file(arguments.path)
+    end
+    return var
 end
 
 return M

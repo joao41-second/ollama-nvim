@@ -48,12 +48,8 @@ function M.request(messages)
                 table.insert(messages, decode.message)
 
                 if decode.message.tool_calls then
-                    local tools = decode.message.tool_calls[1]
-
-                    if tools["function"].name == "read_file" then
-                        print("usar funsao", tools["function"].arguments.path)
-                        var = "ola mundo"
-                    end
+                    local tool = decode.message.tool_calls[1]
+                    var = tools.tools_use(tool["function"].name, tool["function"].arguments)
                     table.insert(messages, { role = "tool", tool_call_id = tools.id, content = var })
                     M.request(messages)
                 end
