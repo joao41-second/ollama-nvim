@@ -17,12 +17,17 @@ function M.simple_curl_p(prompt)
             content = prompt,
         },
     }
-    local json = vim.fn.json_encode({
+    M.request(messages)
+end
+
+function M.request(messages)
+    local json = vim.json.encode({
         model = "qwen3:8b",
         think = false,
         messages = messages,
         tools = tools.tools,
     })
+    local var = ""
 
     vim.system({ "curl", "-N", M.url, "-H", "Content-Type: application/json", "-d", json }, {
         stdout = function(_, data)
@@ -37,16 +42,20 @@ function M.simple_curl_p(prompt)
                 return
             end
 
-            print(data)
-
             if decode.message and decode.message.content then
                 ui.append_message(decode.message.content)
 
+                table.insert(messages, decode.message)
+
                 if decode.message.tool_calls then
                     local tools = decode.message.tool_calls[1]
-                    print(tools["function"].name)
-                    if tools["function"].name == "readfile" then
+
+                    if tools["function"].name == "read_file" then
+                        print("usar funsao", tools["function"].arguments.path)
+                        var = "ola mundo"
                     end
+                    table.insert(messages, { role = "tool", tool_call_id = tools.id, content = var })
+                    M.request(messages)
                 end
             end
         end,
